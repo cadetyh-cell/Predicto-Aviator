@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>Aviator Analyzer — V1</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#0b1020;color:#f5f7fb}
+.wrap{max-width:720px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;align-items:center}
+h1{font-size:25px;margin:4px 0}.tag{font-size:12px;color:#9ca3af}
+.card{background:#151c30;border:1px solid #26304a;border-radius:18px;padding:16px;margin-top:14px}
+label{display:block;color:#aeb8cc;font-size:13px;margin-bottom:7px}
+input{width:100%;padding:13px;border-radius:12px;border:1px solid #34405d;background:#0d1426;color:white;font-size:16px}
+button{border:0;border-radius:12px;padding:12px 15px;font-weight:700;cursor:pointer}
+.primary{background:#f59e0b;color:#111827}.secondary{background:#27324d;color:white}.danger{background:#3b1f2b;color:#fecaca}
+.row{display:flex;gap:9px;flex-wrap:wrap}.row input{flex:1;min-width:180px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.stat{background:#0d1426;border-radius:14px;padding:12px}.stat b{display:block;font-size:21px;margin-top:4px}
+.signal{text-align:center;padding:18px;border-radius:16px;background:#0d1426}.signal strong{font-size:25px}
+canvas{width:100%;height:240px;background:#0d1426;border-radius:14px;margin-top:8px}
+.history{display:flex;gap:7px;flex-wrap:wrap}.pill{padding:7px 10px;border-radius:10px;background:#27324d;font-weight:700}
+small{color:#9ca3af}.note{font-size:12px;line-height:1.5;color:#9ca3af}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div><h1>✈️ Aviator Analyzer</h1><div class="tag">V1 • análise estatística</div></div>
+  <button class="secondary" onclick="resetData()">Limpar</button></div>
+
+  <div class="card">
+    <label>Adicionar multiplicador</label>
+    <div class="row">
+      <input id="value" type="number" min="1" step="0.01" placeholder="Ex.: 2.35">
+      <button class="primary" onclick="addValue()">Adicionar</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="stats">
+      <div class="stat"><small>Rodadas</small><b id="count">0</b></div>
+      <div class="stat"><small>Média</small><b id="avg">—</b></div>
+      <div class="stat"><small>Maior</small><b id="max">—</b></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="signal"><small>Tendência estatística</small><br><strong id="signal">Sem dados</strong><br><small id="detail">Adicione alguns resultados.</small></div>
+  </div>
+
+  <div class="card">
+    <label>Gráfico do histórico</label>
+    <canvas id="chart" width="680" height="240"></canvas>
+  </div>
+
+  <div class="card">
+    <label>Últimos resultados</label>
+    <div id="history" class="history"><small>Nenhum resultado.</small></div>
+  </div>
+
+  <div class="card note">
+    ⚠️ Este site analisa apenas os dados introduzidos. O Aviator é um jogo de resultado aleatório; esta análise não consegue garantir nem prever o próximo multiplicador.
+  </div>
+</div>
+<script>
+let data=JSON.parse(localStorage.getItem("aviator_v1")||"[]");
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem("aviator_v1",JSON.stringify(data))}
+function addValue(){
+ const n=parseFloat($("value").value);
+ if(!Number.isFinite(n)||n<1)return;
+ data.push(n); if(data.length>100)data.shift(); $("value").value=""; save(); render();
+}
+$("value").addEventListener("keydown",e=>{if(e.key==="Enter")addValue()});
+function resetData(){if(confirm("Apagar todo o histórico?")){data=[];save();render()}}
+function render(){
+ $("count").textContent=data.length;
+ $("avg").textContent=data.length?(data.reduce((a,b)=>a+b,0)/data.length).toFixed(2)+"x":"—";
+ $("max").textContent=data.length?Math.max(...data).toFixed(2)+"x":"—";
+ $("history").innerHTML=data.length?data.slice().reverse().slice(0,30).map(x=>`<span class="pill">${x.toFixed(2)}x</span>`).join(""):"<small>Nenhum resultado.</small>";
+ let s="Sem dados",d="Adicione alguns resultados.";
+ if(data.length>=5){
+   const last=data.slice(-5), avg=last.reduce((a,b)=>a+b,0)/last.length;
+   if(avg<1.7){s="Baixa";d="Média recente abaixo de 1,70x."}
+   else if(avg<3){s="Moderada";d="Média recente entre 1,70x e 3,00x."}
+   else{s="Alta";d="Média recente acima de 3,00x."}
+ }
+ $("signal").textContent=s;$("detail").textContent=d;draw();
+}
+function draw(){
+ const c=$("chart"),ctx=c.getContext("2d"),w=c.width,h=c.height;
+ ctx.clearRect(0,0,w,h); if(!data.length)return;
+ const vals=data.slice(-40), max=Math.max(3,...vals), pad=28;
+ ctx.strokeStyle="#34405d";ctx.lineWidth=1;
+ for(let i=0;i<4;i++){let y=pad+i*(h-pad*2)/3;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke()}
+ ctx.strokeStyle="#f59e0b";ctx.lineWidth=3;ctx.beginPath();
+ vals.forEach((v,i)=>{let x=pad+i*(w-pad*2)/Math.max(1,vals.length-1);let y=h-pad-(v/max)*(h-pad*2);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+ ctx.stroke();
+}
+render();
+</script>
+</body>
+</html>
