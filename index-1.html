@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070a10">
+<title>Predicto Aviator</title>
+<style>
+:root{
+  --bg:#070a10;--panel:#0d121b;--panel2:#111827;--line:#263143;
+  --text:#f4f7fb;--muted:#9ba7b8;--blue:#38a7ff;--purple:#a56cff;
+  --pink:#ff4fa3;--green:#39d353;--yellow:#ffc928;--red:#ff4057;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at top,#121b2d 0,#070a10 45%,#05070b 100%);
+ color:var(--text);font-family:Arial,Helvetica,sans-serif}
+.app{max-width:1050px;margin:auto;padding:16px 14px 90px}
+header{text-align:center;padding:12px 0 20px}
+.logo{font-size:34px;font-weight:900;letter-spacing:.5px}
+.logo span{color:#e71936}.sub{color:var(--muted);margin-top:5px}
+.card{background:linear-gradient(145deg,#101725,#0a0f17);border:1px solid var(--line);
+ border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 12px 35px rgba(0,0,0,.18)}
+.hero{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:14px;align-items:center}
+.label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.big{font-size:46px;font-weight:900;margin-top:5px}
+.big.blue{color:var(--blue)}.big.purple{color:var(--purple)}.big.pink{color:var(--pink)}
+.status{text-align:right}.status b{font-size:22px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:6px;background:var(--green)}
+h2,h3{margin:0 0 12px}.section-title{display:flex;justify-content:space-between;align-items:center}
+.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:14px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.stat{background:#0a1020;border:1px solid #1d2839;border-radius:13px;padding:13px;text-align:center}
+.stat .v{font-size:22px;font-weight:900;margin-top:7px}
+.inputrow{display:flex;gap:8px}
+input,textarea,button{font:inherit}
+textarea{width:100%;min-height:92px;resize:vertical;background:#080e19;color:#fff;border:1px solid #29364c;
+ border-radius:13px;padding:14px;outline:none}
+textarea:focus{border-color:var(--blue)}
+button{border:0;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer}
+.primary{background:#e71936;color:#fff}.secondary{background:#1a2434;color:#fff}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.chartbox{height:340px;background:#080d16;border:1px solid #202b3c;border-radius:14px;padding:10px}
+canvas{width:100%;height:100%;display:block}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-top:8px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.history{max-height:410px;overflow:auto}
+.row{display:grid;grid-template-columns:1fr auto auto 95px;gap:9px;align-items:center;padding:10px 5px;border-bottom:1px solid rgba(255,255,255,.06)}
+.row:last-child{border:0}.num{color:var(--muted)}.mv{font-weight:900;font-size:17px}
+.bar{height:8px;background:#202a3a;border-radius:20px;overflow:hidden}.fill{height:100%;border-radius:20px}
+.estimate{text-align:center}.range{font-size:35px;font-weight:900;color:var(--yellow);margin:8px 0 14px}
+.gauge{height:20px;background:linear-gradient(90deg,var(--green),var(--yellow),var(--red));border-radius:20px;position:relative;margin:12px 0}
+.needle{position:absolute;top:-5px;width:4px;height:30px;background:#fff;border-radius:5px;transform:translateX(-2px)}
+.conf{display:inline-block;padding:7px 12px;border-radius:20px;background:#222d40;color:var(--yellow);font-weight:900}
+.note{color:var(--muted);font-size:12px;line-height:1.45;margin-top:10px}
+.empty{text-align:center;color:var(--muted);padding:25px 10px}
+.warning{border-color:#5c3f12;background:#171208}
+@media(max-width:760px){
+ .hero,.grid{grid-template-columns:1fr}.status{text-align:left}
+ .stats{grid-template-columns:repeat(2,1fr)}
+ .big{font-size:40px}.chartbox{height:300px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo">✈️ <span>Predicto</span> Aviator</div>
+  <div class="sub">Análise • Estatísticas • Histórico</div>
+</header>
+
+<section class="card hero">
+  <div><div class="label">Último resultado</div><div id="last" class="big">—</div><div id="date" class="sub">Sem dados</div></div>
+  <div class="chartbox" style="height:170px"><canvas id="miniChart"></canvas></div>
+  <div class="status"><div class="label">Status</div><b id="status">AGUARDANDO</b> <span class="dot"></span></div>
+</section>
+
+<section class="card">
+ <div class="section-title"><h2>📊 Estatísticas gerais</h2><span id="countLabel" class="label">0 rodadas</span></div>
+ <div class="stats">
+  <div class="stat"><div class="label">Rodadas</div><div id="count" class="v">0</div></div>
+  <div class="stat"><div class="label">Média</div><div id="avg" class="v">0.00x</div></div>
+  <div class="stat"><div class="label">Maior</div><div id="max" class="v">0.00x</div></div>
+  <div class="stat"><div class="label">Menor</div><div id="min" class="v">0.00x</div></div>
+ </div>
+</section>
+
+<section class="card">
+ <h2>➕ Adicionar histórico</h2>
+ <div class="sub" style="margin-bottom:10px">Digite multiplicadores separados por espaço, vírgula ou ponto e vírgula.</div>
+ <textarea id="input" placeholder="Ex.: 1.32 2.18 7.64 1.09 3.21 12.45"></textarea>
+ <div class="actions">
+  <button class="primary" onclick="addValues()">Adicionar resultados</button>
+  <button class="secondary" onclick="clearAll()">Limpar histórico</button>
+ </div>
+</section>
+
+<section class="card">
+ <div class="section-title"><h2>📈 Gráfico dos multiplicadores</h2><span class="label">Evolução</span></div>
+ <div class="chartbox"><canvas id="chart"></canvas></div>
+ <div class="legend">
+  <span><i style="background:var(--blue)"></i>Azul: &lt; 2x</span>
+  <span><i style="background:var(--purple)"></i>Roxo: 2x–4,99x</span>
+  <span><i style="background:var(--pink)"></i>Rosa: ≥ 5x</span>
+ </div>
+</section>
+
+<div class="grid">
+<section class="card">
+ <div class="section-title"><h2>📋 Histórico de multiplicadores</h2><button class="secondary" onclick="loadDemo()">Exemplo</button></div>
+ <div id="history" class="history"><div class="empty">Ainda não há resultados.</div></div>
+</section>
+
+<section class="card">
+ <h2>🎯 Estimativa estatística</h2>
+ <div class="estimate">
+   <div id="range" class="range">—</div>
+   <div class="gauge"><div id="needle" class="needle" style="left:50%"></div></div>
+   <div>Confiança: <span id="confidence" class="conf">—</span></div>
+   <div class="note">Esta faixa é uma descrição estatística do histórico inserido. Não prevê nem garante o próximo resultado.</div>
+ </div>
+</section>
+</div>
+
+<section class="card">
+ <h2>🔎 Distribuição por faixa</h2>
+ <div class="stats">
+  <div class="stat"><div class="label">Azul &lt; 2x</div><div id="bluePct" class="v" style="color:var(--blue)">0%</div></div>
+  <div class="stat"><div class="label">Roxo 2–4,99x</div><div id="purplePct" class="v" style="color:var(--purple)">0%</div></div>
+  <div class="stat"><div class="label">Rosa ≥ 5x</div><div id="pinkPct" class="v" style="color:var(--pink)">0%</div></div>
+  <div class="stat"><div class="label">Última faixa</div><div id="lastBand" class="v">—</div></div>
+ </div>
+</section>
+
+<section class="card warning">
+ <h3>⚠️ Nota importante</h3>
+ <div class="note">O Predicto Aviator é uma ferramenta de análise do histórico. Resultados de jogos crash são gerados por sistemas aleatórios/RNG e sequências anteriores não permitem determinar com segurança a próxima rodada.</div>
+</section>
+</div>
+
+<script>
+const KEY="predicto_aviator_history_v2";
+let values=JSON.parse(localStorage.getItem(KEY)||"[]");
+
+function band(v){return v<2?"blue":v<5?"purple":"pink"}
+function bandName(v){return v<2?"AZUL":v<5?"ROXO":"ROSA"}
+function save(){localStorage.setItem(KEY,JSON.stringify(values))}
+function addValues(){
+ const raw=document.getElementById("input").value.trim();
+ if(!raw)return;
+ const nums=raw.replace(/x/gi,"").split(/[\\s,;]+/).map(s=>parseFloat(s.replace(",", "."))).filter(n=>Number.isFinite(n)&&n>=1);
+ values.push(...nums); save(); document.getElementById("input").value=""; render();
+}
+function clearAll(){if(confirm("Limpar todo o histórico?")){values=[];save();render()}}
+function loadDemo(){
+ values=[1.32,2.18,7.64,1.09,3.21,1.56,12.45,1.14,2.71,1.33,3.80,1.59,1.66,1.73,2.24];
+ save();render();
+}
+function fmt(v){return Number(v).toFixed(2)+"x"}
+function render(){
+ const n=values.length;
+ document.getElementById("count").textContent=n;
+ document.getElementById("countLabel").textContent=n+" rodadas";
+ if(!n){
+  ["avg","max","min"].forEach(id=>document.getElementById(id).textContent="0.00x");
+  document.getElementById("last").textContent="—";document.getElementById("date").textContent="Sem dados";
+  document.getElementById("status").textContent="AGUARDANDO";document.getElementById("history").innerHTML='<div class="empty">Ainda não há resultados.</div>';
+  ["bluePct","purplePct","pinkPct"].forEach(id=>document.getElementById(id).textContent="0%");
+  document.getElementById("lastBand").textContent="—";document.getElementById("range").textContent="—";document.getElementById("confidence").textContent="—";
+  draw("chart",[]);draw("miniChart",[]);return;
+ }
+ const avg=values.reduce((a,b)=>a+b,0)/n,max=Math.max(...values),min=Math.min(...values),last=values[n-1];
+ document.getElementById("avg").textContent=fmt(avg);document.getElementById("max").textContent=fmt(max);document.getElementById("min").textContent=fmt(min);
+ const el=document.getElementById("last");el.textContent=fmt(last);el.className="big "+band(last);
+ document.getElementById("date").textContent=new Date().toLocaleString("pt-PT",{dateStyle:"short",timeStyle:"short"});
+ document.getElementById("status").textContent=bandName(last);
+ document.getElementById("lastBand").textContent=bandName(last);
+
+ const b=values.filter(v=>v<2).length,p=values.filter(v=>v>=2&&v<5).length,r=values.filter(v=>v>=5).length;
+ document.getElementById("bluePct").textContent=(b/n*100).toFixed(1)+"%";
+ document.getElementById("purplePct").textContent=(p/n*100).toFixed(1)+"%";
+ document.getElementById("pinkPct").textContent=(r/n*100).toFixed(1)+"%";
+
+ const sorted=[...values].sort((a,b)=>a-b);
+ const q25=sorted[Math.floor((n-1)*.25)],q75=sorted[Math.floor((n-1)*.75)];
+ const lo=Math.max(1,q25),hi=Math.max(lo,q75);
+ document.getElementById("range").textContent=fmt(lo)+" – "+fmt(hi);
+ document.getElementById("confidence").textContent=n<5?"BAIXA":(n<20?"MÉDIA":"DESCRITIVA");
+
+ const maxBar=Math.max(5,max);
+ document.getElementById("history").innerHTML=values.slice().reverse().slice(0,30).map((v,i)=>{
+  const c=band(v),arrow=v<2?"↓":"↑",w=Math.min(100,v/maxBar*100);
+  return `<div class="row"><span class="num">#${n-i}</span><span class="mv ${c}">${fmt(v)}</span><span class="${c}">${arrow}</span><span class="bar"><span class="fill" style="width:${w}%;background:var(--${c})"></span></span></div>`;
+ }).join("");
+ draw("chart",values);draw("miniChart",values.slice(-12));
+}
+function draw(id,data){
+ const c=document.getElementById(id),ctx=c.getContext("2d"),rect=c.getBoundingClientRect(),dpr=devicePixelRatio||1;
+ const w=Math.max(100,rect.width),h=Math.max(100,rect.height);c.width=w*dpr;c.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ if(!data.length)return;
+ const pad={l:42,r:12,t:15,b:28},cw=w-pad.l-pad.r,ch=h-pad.t-pad.b,maxV=Math.max(5,Math.ceil(Math.max(...data))),minV=1;
+ const X=i=>pad.l+(data.length===1?cw/2:i*cw/(data.length-1)),Y=v=>pad.t+ch-(Math.min(v,maxV)-minV)/(maxV-minV)*ch;
+ ctx.font="11px Arial";ctx.textAlign="right";
+ for(let i=0;i<=4;i++){let yy=pad.t+ch-i*ch/4,val=minV+(maxV-minV)*i/4;ctx.strokeStyle="rgba(150,165,190,.16)";ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(w-pad.r,yy);ctx.stroke();ctx.fillStyle="#8490a4";ctx.fillText(val.toFixed(1)+"x",pad.l-6,yy+4)}
+ [2,5].forEach((v,i)=>{if(v<=maxV){let yy=Y(v);ctx.setLineDash([5,5]);ctx.strokeStyle=i?"rgba(255,79,163,.5)":"rgba(56,167,255,.5)";ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(w-pad.r,yy);ctx.stroke();ctx.setLineDash([])}})
+ ctx.beginPath();data.forEach((v,i)=>i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v)));ctx.lineTo(X(data.length-1),pad.t+ch);ctx.lineTo(X(0),pad.t+ch);ctx.closePath();let g=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);g.addColorStop(0,"rgba(80,120,255,.25)");g.addColorStop(1,"rgba(80,120,255,0)");ctx.fillStyle=g;ctx.fill();
+ ctx.beginPath();data.forEach((v,i)=>i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v)));ctx.strokeStyle="#7aa0ff";ctx.lineWidth=2.5;ctx.stroke();
+ data.forEach((v,i)=>{let col=v<2?"#38a7ff":v<5?"#a56cff":"#ff4fa3";ctx.beginPath();ctx.fillStyle=col;ctx.arc(X(i),Y(v),4,0,Math.PI*2);ctx.fill()});
+ ctx.fillStyle="#8490a4";ctx.textAlign="center";let step=Math.max(1,Math.ceil(data.length/8));for(let i=0;i<data.length;i+=step)ctx.fillText(i+1,X(i),h-8);
+}
+window.addEventListener("resize",render);render();
+</script>
+</body>
+</html>
