@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#111827">
+<title>Predicto Aviator</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1020;color:#f3f4f6;font-family:Arial,sans-serif}
+.container{max-width:760px;margin:auto;padding:18px}
+h1{text-align:center;margin:8px 0 4px}
+.subtitle{text-align:center;color:#9ca3af;margin-bottom:18px}
+.card{background:#151c30;border:1px solid #26304a;border-radius:16px;padding:16px;margin-bottom:14px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:#0f1628;border-radius:12px;padding:12px;text-align:center}
+.stat b{display:block;font-size:20px;margin-top:5px}
+textarea{width:100%;min-height:90px;background:#0b1020;color:white;border:1px solid #374151;border-radius:10px;padding:12px;font-size:16px;resize:vertical}
+button{border:0;border-radius:10px;padding:12px 16px;font-weight:bold;cursor:pointer;margin:8px 6px 0 0}
+.add{background:#38a7ff;color:#07111d}.clear{background:#ef4444;color:white}
+canvas{width:100%;height:280px;background:#0b1020;border-radius:12px}
+.last{text-align:center;font-size:34px;font-weight:bold;margin:5px}
+.status{text-align:center;color:#9ca3af}
+.legend{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;color:#d1d5db;font-size:14px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.blue{background:#38a7ff}.purple{background:#a56cff}.pink{background:#ff4fa3}
+.history{display:flex;flex-wrap:wrap;gap:7px;max-height:180px;overflow:auto}
+.item{padding:7px 10px;border-radius:8px;font-weight:bold;background:#1f2937}
+.note{font-size:13px;color:#9ca3af;line-height:1.5}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}.container{padding:12px}canvas{height:230px}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>✈️ Predicto Aviator</h1>
+<div class="subtitle">Análise do histórico de multiplicadores</div>
+
+<div class="card">
+<div class="status">Último resultado</div>
+<div id="last" class="last">—</div>
+<div id="lastStatus" class="status">Adicione resultados para começar</div>
+</div>
+
+<div class="card">
+<div class="stats">
+<div class="stat">Rodadas<b id="count">0</b></div>
+<div class="stat">Média<b id="avg">0.00x</b></div>
+<div class="stat">Máximo<b id="max">0.00x</b></div>
+<div class="stat">Mínimo<b id="min">0.00x</b></div>
+</div>
+</div>
+
+<div class="card">
+<h3>📈 Gráfico</h3>
+<canvas id="chart"></canvas>
+<div class="legend">
+<span><i class="dot blue"></i>&lt; 2x</span>
+<span><i class="dot purple"></i>2x–4,99x</span>
+<span><i class="dot pink"></i>≥ 5x</span>
+</div>
+</div>
+
+<div class="card">
+<h3>➕ Adicionar resultados</h3>
+<textarea id="input" placeholder="Ex.: 1.32, 2.18, 7.64, 1.09"></textarea>
+<button class="add" onclick="addResults()">Adicionar resultados</button>
+<button class="clear" onclick="clearHistory()">Limpar histórico</button>
+<p class="note">Pode separar os valores por espaço, vírgula ou ponto e vírgula.</p>
+</div>
+
+<div class="card">
+<h3>📋 Histórico</h3>
+<div id="history" class="history"></div>
+</div>
+
+<div class="card">
+<p class="note">Este painel analisa apenas os resultados introduzidos no navegador. Não garante nem pode garantir o próximo multiplicador.</p>
+</div>
+</div>
+
+<script>
+const KEY="predicto_aviator_history_v3";
+let history=JSON.parse(localStorage.getItem(KEY)||"[]");
+
+function color(v){
+ if(v<2)return "#38a7ff";
+ if(v<5)return "#a56cff";
+ return "#ff4fa3";
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(history));}
+function addResults(){
+ const raw=document.getElementById("input").value.trim();
+ if(!raw)return;
+ const vals=raw.split(/[\s,;]+/).map(x=>parseFloat(x.replace("x",""))).filter(x=>Number.isFinite(x)&&x>0);
+ if(!vals.length)return;
+ history.push(...vals);
+ save();
+ document.getElementById("input").value="";
+ render();
+}
+function clearHistory(){
+ if(confirm("Apagar todo o histórico?")){
+  history=[];
+  save();
+  render();
+ }
+}
+function render(){
+ const count=history.length;
+ document.getElementById("count").textContent=count;
+ if(!count){
+  document.getElementById("last").textContent="—";
+  document.getElementById("lastStatus").textContent="Adicione resultados para começar";
+  document.getElementById("avg").textContent="0.00x";
+  document.getElementById("max").textContent="0.00x";
+  document.getElementById("min").textContent="0.00x";
+  document.getElementById("history").innerHTML="";
+  draw();
+  return;
+ }
+ const last=history[count-1];
+ const sum=history.reduce((a,b)=>a+b,0);
+ document.getElementById("last").textContent=last.toFixed(2)+"x";
+ document.getElementById("last").style.color=color(last);
+ document.getElementById("lastStatus").textContent=last<2?"Baixo":"Normal / alto";
+ document.getElementById("avg").textContent=(sum/count).toFixed(2)+"x";
+ document.getElementById("max").textContent=Math.max(...history).toFixed(2)+"x";
+ document.getElementById("min").textContent=Math.min(...history).toFixed(2)+"x";
+ document.getElementById("history").innerHTML=history.slice().reverse().map(v=>`<span class="item" style="color:${color(v)}">${v.toFixed(2)}x</span>`).join("");
+ draw();
+}
+function draw(){
+ const c=document.getElementById("chart"),ctx=c.getContext("2d");
+ const d=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;
+ c.width=w*d;c.height=h*d;ctx.setTransform(d,0,0,d,0,0);
+ ctx.clearRect(0,0,w,h);
+ if(history.length<1)return;
+ const data=history.slice(-50), maxV=Math.max(5,...data);
+ const pad=24, cw=w-pad*2,ch=h-pad*2;
+ ctx.strokeStyle="#26304a";ctx.lineWidth=1;
+ for(let i=0;i<5;i++){let y=pad+ch*i/4;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke();}
+ if(data.length===1){
+  ctx.fillStyle=color(data[0]);ctx.beginPath();ctx.arc(w/2,h/2,5,0,Math.PI*2);ctx.fill();return;
+ }
+ ctx.beginPath();
+ data.forEach((v,i)=>{
+  const x=pad+(cw*i/(data.length-1));
+  const y=pad+ch-(Math.min(v,maxV)/maxV)*ch;
+  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+ });
+ ctx.strokeStyle="#8fb9ff";ctx.lineWidth=2;ctx.stroke();
+ data.forEach((v,i)=>{
+  const x=pad+(cw*i/(data.length-1));
+  const y=pad+ch-(Math.min(v,maxV)/maxV)*ch;
+  ctx.fillStyle=color(v);ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();
+ });
+}
+window.addEventListener("resize",draw);
+document.getElementById("input").addEventListener("keydown",e=>{if(e.ctrlKey&&e.key==="Enter")addResults()});
+render();
+</script>
+</body>
+</html>
